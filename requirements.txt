@@ -1,0 +1,5 @@
+requests~=2.25.1
+telegraph~=1.4.1
+backendm~=1.0
+Django~=3.2.4
+setuptools~=57.0.0
