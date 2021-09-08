@@ -20,6 +20,10 @@ class BotUser(models.Model):
     def __str__(self):
         return self.full_name
 
+    class Meta:
+        verbose_name = "Foydalanuvchi"
+        verbose_name_plural = verbose_name + "lar"
+
 
 class Category(models.Model):
     objects = models.Manager()
@@ -40,10 +44,14 @@ class Category(models.Model):
 
 
 class Product(models.Model):
+    uzs = "So`m"
+    dollar = "$"
+    STATUS = [(uzs, "So`m"), (dollar, "$")]
     objects = models.Manager()
     title = models.CharField(max_length=100)
     description = models.TextField()
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    price_choice = models.CharField(max_length=50, choices=STATUS, default=uzs)
     price = models.IntegerField()
     image = models.ImageField(
         upload_to='image',
@@ -52,6 +60,9 @@ class Product(models.Model):
     def __str__(self):
         return self.title
 
+    class Meta:
+        verbose_name = "Mahsulot"
+        verbose_name_plural = verbose_name + "lar"
 
 class ShopCard(models.Model):
     new = 'Tezkor Xarid 🛍'
@@ -87,19 +98,21 @@ class ShopCard(models.Model):
 
 class Order(models.Model):
     objects = models.Manager()
+    CANCELLED = 'Bekor qilingan ❌'
     new = 'Yangi 🆕'
-    checked = 'Tekshirilmoqda ⏳'
+    checked = 'Tayyoranmoqda ⏳'
     confirmed = 'Tayyor ✅'
     STATUS = [
+        (CANCELLED, 'Bekor qilingan ❌'),
         (new, 'Yangi 🆕'),
-        (checked, 'Tekshirilmoqda ⏳'),
+        (checked, 'Tayyorlanmoqda ⏳'),
         (confirmed, 'Tayyor ✅')
     ]
     user = models.ForeignKey(BotUser, on_delete=models.CASCADE)
     products = models.CharField(max_length=200)
     count = models.IntegerField(default=0)
     all_price = models.IntegerField(default=0)
-
+    currency = models.CharField(max_length=10)
     status = models.CharField(
         max_length=50,
         choices=STATUS,
@@ -111,8 +124,27 @@ class Order(models.Model):
         return str(self.products)
 
 
+    class Meta:
+        verbose_name = "Buyutma"
+        verbose_name_plural = verbose_name + "lar"
+
 class OrderCredit(models.Model):
+    CANCELLED = 'Bekor qilingan ❌'
+    new = 'Yangi 🆕'
+    checked = 'Tekshirilmoqda ⏳'
+    confirmed = 'Tayyor ✅'
+    STATUS = [
+        (CANCELLED, 'Bekor qilingan ❌'),
+        (new, 'Yangi 🆕'),
+        (checked, 'Tekshirilmoqda ⏳'),
+        (confirmed, 'Tayyor ✅')
+    ]
     user = models.ForeignKey(BotUser, on_delete=models.CASCADE)
+    status = models.CharField(
+        max_length=50,
+        choices=STATUS,
+        default=new
+    )
     products = models.CharField(max_length=200)
     count = models.IntegerField(default=0)
     protsent = models.IntegerField(default=0)
@@ -120,10 +152,15 @@ class OrderCredit(models.Model):
     payments = models.IntegerField(default=0)
     month_pay = models.IntegerField(default=0)
     all_price = models.IntegerField(default=0)
+    currency = models.CharField(max_length=10)
     check = models.BooleanField(default=False)
-
+    
     def __str__(self):
         return str(self.products)
+
+    class Meta:
+        verbose_name = "Buyurtma Kredit"
+        verbose_name_plural = verbose_name + "lar"
 
 class ShopCardOrderCredit(models.Model):
     user = models.ForeignKey(BotUser, on_delete=models.CASCADE)
@@ -138,3 +175,4 @@ class ShopCardOrderCredit(models.Model):
 
     def __str__(self):
         return str(self.products)
+        

@@ -41,14 +41,14 @@ checked = 'Bo`lib to`lash'
 
 
 def dic(call):
-    print(call.data)
     call_data = call.data.split(CallTypes.SEP)
-    call_id = call_data[1]
+    call_id = int(call_data[1])
+    print(call_data)
+
     chat_id = call.message.chat.id
     user = BotUser.objects.get(user_id=chat_id)
     user.number1 = call_id
     user.save()
-    print(user.number1)
     product_order(call)
 
 
@@ -75,6 +75,8 @@ class CallTypes():
     SHOP_CARD_MONTH_PLUS = 'Shop card month plus'
     SHOP_CARD_PROTSENT_PLUS = 'shop card protsent'
     SHOP_CARD_PROTSENT_MINUS = 'shop card protsent minus'
+    ACCEPT_ADMIN_CALL_BACK_DATA = 'accepted admin'
+    CANCELLED_ADMIN_CALL_BACK_DATA = 'cancelled admin'
 
     @classmethod
     def sep_join(cls, *args):
@@ -138,7 +140,7 @@ def set_name_message_handler(message):
 def set_contact_message_handler(message):
     chat_id = message.chat.id
     user = BotUser.objects.get(user_id=chat_id)
-    pprint(message)
+
     contact = message.contact
     phone_number = contact.phone_number
     user.contact = phone_number
@@ -165,22 +167,36 @@ def set_contact_message_handlers(message, product_id):
 
     bot.register_next_step_handler(msg, address_to_message, user, product_id)
 
+def admin_accept_order(lang, number, id):
+    keyboard = types.InlineKeyboardMarkup(row_width=2)
+    button = [
+        types.InlineKeyboardButton(
+            text=template.ACCEPT[lang],
+            callback_data=CallTypes.sep_join(
+                CallTypes.ACCEPT_ADMIN_CALL_BACK_DATA, number, id
+                )
+        ),
+        types.InlineKeyboardButton(
+            text=template.OTKAZAT[lang],
+            callback_data=CallTypes.sep_join(
+                CallTypes.CANCELLED_ADMIN_CALL_BACK_DATA, number, id
+            )
+        )
+    ]
+    keyboard.add(*button)
+    return keyboard
 
 def address_to_message(message, user, product_id):
-    text = message.text
+    adress = message.text
     chat_id = message.chat.id
-    if text in ["❌ Bekor qilish", "❌ Отменить действие"]:
+    if adress in ["❌ Bekor qilish", "❌ Отменить действие"]:
         products_keyboard_handlers(message)
     else:
         shopcard = ShopCard.objects.get(id=product_id)
-        print('--------------')
-        print('1111111')
-        print('--------------')
 
+        text = ''
         if shopcard.chec == True:
-            print('--------------')
-            print('22222')
-            print('--------------')
+
             order_card_one = OrderCredit.objects.create(
                 user=user
             )
@@ -191,33 +207,59 @@ def address_to_message(message, user, product_id):
             order_card_one.payments = shopcard.payments
             order_card_one.month_pay = shopcard.month_pay
             order_card_one.all_price = shopcard.payments
+            order_card_one.currency = shopcard.product.price_choice
             order_card_one.save()
+            text += template.NEW_ORDER_SEND_GROUP[user.language].format(
+                    status=order_card_one.status,
+                    title=shopcard.product.title,
+                    count=shopcard.count,
+                    percent=shopcard.percent,
+                    month=shopcard.month,
+                    payments=shopcard.payments,
+                    one_month=shopcard.month_pay,
+                    currency=order_card_one.currency
+                )
             ShopCard.objects.get(id=product_id).delete()
+            number = 0
         else:
-            order_card_one, _ = Order.objects.create(
+            order_card_one = Order.objects.create(
                 user=user
             )
             order_card_one.products = shopcard.product.title
             order_card_one.count = shopcard.count
             order_card_one.all_price = (shopcard.count * shopcard.product.price)
+            order_card_one.currency = shopcard.product.price_choice
             order_card_one.save()
+            text += template.NEW_ORDER_SEND_GROUPS[user.language].format(
+                    status=order_card_one.status,
+                    title=order_card_one.products,
+                    count=order_card_one.count,
+                    payments=order_card_one.all_price,
+                    currency=order_card_one.currency
+                )
             ShopCard.objects.get(id=product_id).delete()
-
-        user.address = text
+            number = 1
+        user.address = adress
         user.save()
+
+        text = template.NEW_ORDER[user.language].format(id=order_card_one.id, chat_id=chat_id, name=user.full_name,
+                        phone=user.contact, adress=user.address) + text
+        GROUP_CHAT_ID = -1001521180044
+        bot.send_message(chat_id=GROUP_CHAT_ID, text=text, reply_markup=admin_accept_order(lang=user.language, number=number, id=order_card_one.id))
         bot.send_message(
             chat_id=chat_id,
-            text=template.ADDED_TO_SHOP_CARDS[user.language],
+            text=template.ADDED_TO_SHOP_CARDS[user.language].format(id=order_card_one.id),
             reply_markup=products_keyboard(user.language)
         )
 
 
 def addres_to_message(message, user):
-    text = message.text
+    adress = message.text
     chat_id = message.chat.id
-    if text in ["❌ Bekor qilish", "❌ Отменить действие"]:
+    if adress in ["❌ Bekor qilish", "❌ Отменить действие"]:
         products_keyboard_handlers(message)
     else:
+        text = ''
         for shopcard in ShopCard.objects.filter(user=user):
             product_id = shopcard.id
             shop_card = ShopCard.objects.get(id=product_id)
@@ -233,8 +275,20 @@ def addres_to_message(message, user):
                 order_card_all.payments = shopcard.payments
                 order_card_all.month_pay = shopcard.month_pay
                 order_card_all.all_price = shopcard.payments
+                order_card_all.currency = shopcard.product.price_choice
                 order_card_all.save()
+                text += template.NEW_ORDER_SEND_GROUP[user.language].format(
+                    status=order_card_all.status,
+                    title=shopcard.product.title,
+                    count=shopcard.count,
+                    percent=shopcard.percent,
+                    month=shopcard.month,
+                    payments=shopcard.payments,
+                    one_month=shopcard.month_pay,
+                    currency=order_card_all.currency
+                )
                 ShopCard.objects.get(id=product_id).delete()
+                number = 0
             else:
                 order_card_all = Order.objects.create(
                     user=user,
@@ -242,24 +296,50 @@ def addres_to_message(message, user):
                 order_card_all.products = shopcard.product.title
                 order_card_all.count = shopcard.count
                 order_card_all.all_price = (shop_card.count * shop_card.product.price)
+                order_card_all.currency = shopcard.product.price_choice
                 order_card_all.save()
+                text += template.NEW_ORDER_SEND_GROUPS[user.language].format(
+                    status=order_card_all.status,
+                    title=order_card_all.products,
+                    count=order_card_all.count,
+                    payments=order_card_all.all_price,
+                    currency=order_card_all.currency
+                )
                 ShopCard.objects.get(id=product_id).delete()
-        user.address = text
+                number = 1
+        user.address = adress
         user.save()
+        text = template.NEW_ORDER[user.language].format(id=order_card_all.id, chat_id=chat_id, name=user.full_name,
+                        phone=user.contact, adress=user.address)+text
+
+        GROUP_CHAT_ID = -1001521180044
+        bot.send_message(chat_id=GROUP_CHAT_ID, text=text, 
+                        reply_markup=admin_accept_order(lang=user.language, number=number, id=order_card_all.id))
         bot.send_message(
             chat_id=chat_id,
-            text=template.ADDED_TO_SHOP_CARDS[user.language],
+            text=template.ADDED_TO_SHOP_CARDS[user.language].format(id=order_card_all.id),
             reply_markup=products_keyboard(user.language)
         )
 
 
+@bot.message_handler(commands=['id'])
+def id(message):
+    bot.send_message(chat_id=message.chat.id, text=f'{message.chat.id}')
+    
+
 @bot.callback_query_handler(func=lambda call: True)
 def callback_data_message(call):
     chat_id = call.message.chat.id
-    user = BotUser.objects.get(user_id=chat_id)
     call_data = call.data.split(CallTypes.SEP)
     call_type = call_data[0]
-    print(call.data)
+    if call_type == CallTypes.ACCEPT_ADMIN_CALL_BACK_DATA:
+        accepted_admin_call_handler(call)
+        return
+    if call_type == CallTypes.CANCELLED_ADMIN_CALL_BACK_DATA:
+        cancelled_admin_call_back_data(call)
+        return
+    user = BotUser.objects.get(user_id=chat_id)
+
     if call_type == 'uz' or call_type == 'ru':
         user.language = call.data
         user.save()
@@ -336,7 +416,6 @@ def callback_data_message(call):
         shop_card_pratsent_plus_call_handler(call)
     elif call_type == CallTypes.SHOP_CARD_PROTSENT_MINUS:
         shop_card_pratsent_minus_call_handler(call)
-
 
 def products_keyboard(language):
     categories = Category.objects.filter(parent=None)
@@ -420,7 +499,7 @@ def category_select_call_handler(call):
         chat_id = call.message.chat.id
         user = BotUser.objects.get(user_id=chat_id)
         call_data = call.data.split(CallTypes.SEP)
-        print(call_data, call.data)
+      
         category_id = int(call_data[1])
         if category_id == 0:
             categories = Category.objects.filter(parent=None)
@@ -495,14 +574,70 @@ def category_select_call_handler(call):
     except Exception as e:
         print(e)
 
+def cancelled_admin_call_back_data(call):
+    call_data = call.data.split(CallTypes.SEP)
+    call_type = int(call_data[1])
+
+    order = Order.objects.get(id=call_data[2])
+    order.status = Order.CANCELLED
+    order.save()
+    lang = order.user.language
+    user_id = order.user.user_id
+    text = template.ADMIN_CANCELLED_ORDER[lang].format(id=call_data[2])
+    bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.id)
+    text = template.SEND_USER_CANCELLED_ORDER[lang].format(id=call_data[2])
+    bot.send_message(chat_id=user_id, text=text)
+
+def accepted_admin_call_handler(call):
+    call_data = call.data.split(CallTypes.SEP)
+    call_type = int(call_data[1])
+
+    if call_type == 1:
+        order = Order.objects.get(id=call_data[2])
+        order.status = Order.checked
+        order.save()
+        user_id = order.user.user_id
+        user_full_name = order.user.full_name
+        phone = order.user.contact
+        address = order.user.address
+        lang = order.user.language
+        text = template.NEW_ORDER[lang].format(id=call_data[2], chat_id=user_id, 
+                name=user_full_name, phone=phone, adress=address)
+        text += template.NEW_ORDER_SEND_GROUPS[order.user.language].format(status=order.status, title=order.products,
+                                count=order.count, payments=order.all_price, currency=order.currency)
+        bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.id)
+        
+    else:
+        order = OrderCredit.objects.get(id=call_data[2])
+        order.status = OrderCredit.checked
+        order.save()
+        user_id = order.user.user_id
+        user_full_name = order.user.full_name
+        phone = order.user.contact
+        address = order.user.address
+        lang = order.user.language
+        text = template.NEW_ORDER[order.user.language].format(id=call_data[2], chat_id=user_id, 
+                name=user_full_name, phone=phone, adress=address)
+        text += template.NEW_ORDER_SEND_GROUP[lang].format(
+            status=order.status, 
+            title=order.products, 
+            count=order.count,
+            percent=order.protsent, 
+            month=order.month, 
+            payments=order.payments, 
+            one_month=order.month_pay, 
+            currency=order.currency
+        )
+        bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.id)
+
+
 
 def make_product_page_keyboard(category, index, user):
     try:
 
         product = Product.objects.filter(category=category)[index]
         keyboard = types.InlineKeyboardMarkup(row_width=5)
-        print(index)
-        print('######################')
+
         page_buttons = [
             types.InlineKeyboardButton(
                 text='⬅️',
@@ -547,13 +682,13 @@ def make_product_page_keyboard(category, index, user):
 
             order = [
                 types.InlineKeyboardButton(
-                    text="✅ Tezkor Xarid",
+                    text=template.KUPIT_SRAZU[user.language],
                     callback_data=CallTypes.sep_join(
                         'order', 0, index, category.id,
                     )
                 ),
                 types.InlineKeyboardButton(
-                    text="Bo`lib to`lash",
+                    text=template.KUPIT_V_RASSROCHKUS[user.language],
                     callback_data=CallTypes.sep_join(
                         'order', 1, index, category.id,
                     )
@@ -567,13 +702,13 @@ def make_product_page_keyboard(category, index, user):
             )
         else:
             order = [types.InlineKeyboardButton(
-                text="Tezkor Xarid",
+                text=template.KUPIT_SRAZUS[user.language],
                 callback_data=CallTypes.sep_join(
                     'order', 0, index, category.id,
                 )
             ),
                 types.InlineKeyboardButton(
-                    text="✅ Bo`lib to`lash",
+                    text=template.KUPIT_V_RASSROCHKU[user.language],
                     callback_data=CallTypes.sep_join(
                         'order', 1, index, category.id,
                     )
@@ -593,7 +728,7 @@ def make_product_page_keyboard(category, index, user):
             #         callback_data=CallTypes.NOTHING
             #     )
             credit_order = types.InlineKeyboardButton(
-                text="Bo'lib to'lash turini tanlang",
+                text=template.KUPIT[user.language],
                 callback_data=CallTypes.NOTHING
             )
             kredit = [
@@ -679,7 +814,7 @@ def make_product_page_keyboard(category, index, user):
                 types.InlineKeyboardButton(
                     text=template.BACK[user.language],
                     callback_data=CallTypes.sep_join(
-                        CallTypes.BACK_OUTS, category.parent, id
+                        CallTypes.BACK_OUTS, category.parent.id
                     )
                 ),
                 types.InlineKeyboardButton(
@@ -725,7 +860,8 @@ def send_product_page(call, chat_id, product):
                 title=product.title,
                 count=user.number,
                 price=product.price,
-                all_price=user.number * product.price
+                all_price=user.number * product.price,
+                price_choice=product.price_choice
             ),
             chat_id=chat_id,
             message_id=call.message.id,
@@ -754,7 +890,6 @@ def product_page_call_handler(call):
         next_product_index = (index + adding + product_count) % product_count
         product = products[next_product_index]
         image_path = os.path.join(APP_DIR, product.image.name)
-        print(image_path)
         keyboard = make_product_page_keyboard(category, next_product_index, user)
         with open(image_path, 'rb') as f:
             path = requests.post(
@@ -764,7 +899,8 @@ def product_page_call_handler(call):
 
         response = telegraph.create_page(
             f'{product.title}',
-            html_content=f"<img src='{path}'/>",
+            html_content=f"<img src='{path}'/>"
+                        f"{product.description}",
         )
         text = template.PRODUCT_INFO_ONE[user.language]
         bot.edit_message_text(
@@ -773,7 +909,8 @@ def product_page_call_handler(call):
                 title=product.title,
                 count=user.number,
                 price=product.price,
-                all_price=user.number * product.price
+                all_price=user.number * product.price,
+                price_choice=product.price_choice
             ),
             chat_id=chat_id,
             message_id=call.message.id,
@@ -790,7 +927,7 @@ def add_to_shop_card_call_handler(call):
     call_data_list = call.data.split(CallTypes.SEP)
     product_id = call_data_list[1]
     product = Product.objects.get(id=product_id)
-    print(call.data)
+
     shop_card_one, _ = ShopCard.objects.get_or_create(
         user=user,
         product=product
@@ -846,8 +983,7 @@ def add_to_shop_card_credits_call_handler(call):
 
 
 def make_shop_card_one_keyboard(user, index, language):
-    print(index)
-    print('*********************')
+
     shop_cards = ShopCard.objects.filter(user=user)
     keyboard = types.InlineKeyboardMarkup(row_width=3)
     product = shop_cards[index].product
@@ -916,13 +1052,14 @@ def make_shop_card_one(user, index):
     text = template.PRODUCT_INFO_TEXT[user.language]
     product_info = template.PRODUCT_INFO_UP[user.language]
     for shop in shop_cards:
-        print(shop)
+ 
         product_info += text.format(
             status=shop.status,
             title=shop.product.title,
             count=shop.count,
             price=shop.product.price,
-            all_price=shop.count * shop.product.price
+            all_price=shop.count * shop.product.price,
+            price_choice=shop.product.price_choice
         )
         a += 1
     keyboard = make_shop_card_one_keyboard(user, index, user.language)
@@ -931,6 +1068,7 @@ def make_shop_card_one(user, index):
 
 def make_product_card_one(user, category_id, index):
     product = Product.objects.filter(category=category_id)[index]
+
     image_path = os.path.join(APP_DIR, product.image.name)
     keyboard = make_product_page_keyboard(category=product.category, index=index, user=user)
     return product, image_path, keyboard
@@ -1021,7 +1159,6 @@ def shop_card_one_plus_call_handler(call):
 
         month_price = user.number * (
                 (product.price * 0.15 + product.price) * (user.protsent / 100) + product.price) / user.month
-        print(all_price)
         text = template.PRODUCT_INFO[user.language].format(
             path=response['path'],
             title=product.title,
@@ -1029,6 +1166,7 @@ def shop_card_one_plus_call_handler(call):
             protsent=user.month,
             one_pay=round(month_price, 2),
             all_price=all_price,
+            price_choice=product.price_choice
         )
         bot.edit_message_text(
             text=text,
@@ -1044,7 +1182,8 @@ def shop_card_one_plus_call_handler(call):
                 title=product.title,
                 count=user.number,
                 price=product.price,
-                all_price=user.number * product.price
+                all_price=user.number * product.price,
+                price_choice=product.price_choice
             ),
             chat_id=chat_id,
             message_id=call.message.id,
@@ -1102,6 +1241,7 @@ def shop_card_one_minus_call_handler(call):
                 protsent=user.month,
                 one_pay=round(month_price, 2),
                 all_price=all_price,
+                price_choice=product.price_choice
             )
             bot.edit_message_text(
                 text=text,
@@ -1117,7 +1257,8 @@ def shop_card_one_minus_call_handler(call):
                     title=product.title,
                     count=user.number,
                     price=product.price,
-                    all_price=user.number * product.price
+                    all_price=user.number * product.price,
+                    price_choice=product.price_choice
                 ),
                 chat_id=chat_id,
                 message_id=call.message.id,
@@ -1172,6 +1313,7 @@ def shop_card_pratsent_plus_call_handler(call):
         protsent=user.month,
         one_pay=round(month_price, 2),
         all_price=all_price,
+        price_choice=product.price_choice
     )
     bot.edit_message_text(
         text=text,
@@ -1230,6 +1372,7 @@ def shop_card_pratsent_minus_call_handler(call):
             protsent=user.month,
             one_pay=round(month_price, 2),
             all_price=all_price,
+            price_choice=product.price_choice
         )
         bot.edit_message_text(
             text=text,
@@ -1253,9 +1396,7 @@ def shop_card_month_plus_call_handler(call):
     else:
         user.month += 3
         user.save()
-    print('*************************')
-    print(index)
-    print('*************************')
+
     product, image_path, keyboard = make_product_card_one(
         user,
         category_id,
@@ -1288,6 +1429,7 @@ def shop_card_month_plus_call_handler(call):
         protsent=user.month,
         one_pay=round(month_price, 2),
         all_price=all_price,
+        price_choice=product.price_choice
     )
     bot.edit_message_text(
         text=text,
@@ -1359,9 +1501,7 @@ def product_order(call):
         chat_id = call.message.chat.id
         user = BotUser.objects.get(user_id=chat_id)
         call_data_list = call.data.split(CallTypes.SEP)
-        print('***********')
-        print(call_data_list)
-        print('***********')
+
         index = int(call_data_list[2])
         category_id = int(call_data_list[3])
         product, image_path, keyboard = make_product_card_one(
@@ -1381,7 +1521,7 @@ def product_order(call):
                              f"{product.description}",
 
             )
-            print(response['path'])
+
             all_price = user.number * (product.price * 0.15 + product.price)
             if user.protsent > 0:
                 all_price = user.number * (
@@ -1396,7 +1536,9 @@ def product_order(call):
                 protsent=user.month,
                 one_pay=round(month_price, 2),
                 all_price=all_price,
+                price_choice=product.price_choice
             )
+
             bot.edit_message_text(
                 # text=f"""<a href="http://telegra.ph/{response['path']}">{product.title}</a>\nNarx: {product.price}""",
                 text=text,
@@ -1433,6 +1575,7 @@ def product_order(call):
                     protsent=user.month,
                     one_pay=round(month_price, 2),
                     all_price=all_price,
+                    price_choice=product.price_choice
                 ),
                 chat_id=chat_id,
                 message_id=call.message.id,
@@ -1481,7 +1624,7 @@ def shop_card_one_buy(call):
     try:
         chat_id = call.message.chat.id
         user = BotUser.objects.get(user_id=chat_id)
-        print(call.data)
+ 
         call_data_list = call.data.split(CallTypes.SEP)
         product_id = int(call_data_list[1])
         index = int(call_data_list[2])
@@ -1490,12 +1633,6 @@ def shop_card_one_buy(call):
             text=template.SEND_CONTACTS[user.language],
             reply_markup=contact_keyboard(chat_id)
         )
-        # msg=bot.edit_message_text(
-        #     text=template.SEND_CONTACTS[user.language],
-        #     chat_id=chat_id,
-        #     message_id=call.message.id,
-        #     reply_markup=contact_keyboard(chat_id)
-        # )
         bot.register_next_step_handler(msg, set_contact_message_handlers, product_id)
         shop_cards = ShopCard.objects.filter(user=user)
         if shop_cards.exists():
@@ -1505,13 +1642,13 @@ def shop_card_one_buy(call):
             keyboard = make_shop_card_one_keyboard(user, index, user.language)
 
             for shop in shop_cards:
-                print(shop)
                 text = text.format(
                     status=shop.status,
                     title=shop.product.title,
                     count=shop.count,
                     price=shop.product.price,
-                    all_price=shop.count * shop.product.price
+                    all_price=shop.count * shop.product.price,
+                    price_choice=shop.product.price_choice
                 )
                 a += 1
                 product_info += text
@@ -1529,7 +1666,7 @@ def shop_card_one_buy(call):
                 message_id=call.message.id,
                 reply_markup=products_keyboard(user.language)
             )
-
+            
     except Exception as e:
         traceback.print_exc()
 
@@ -1565,7 +1702,7 @@ def user_profile_keyboard(language):
     markup = types.InlineKeyboardMarkup(row_width=1)
 
     text = template.CUSTOMER_PROFILE_ORDER[language]
-    print(text)
+
     name = types.InlineKeyboardButton(text=text, callback_data=CallTypes.sep_join(CallTypes.SET_PROFIL, 1))
     text1 = template.CUSTOMER_PROFILE_LANGUAGE[language]
     name1 = types.InlineKeyboardButton(text=text1, callback_data=CallTypes.sep_join(CallTypes.SET_PROFIL, 2))
@@ -1594,9 +1731,9 @@ def customer_edit(call):
         chat_id = call.message.chat.id
         user = BotUser.objects.get(user_id=chat_id)
         call_data_list = call.data.split(CallTypes.SEP)
-        print(call.data)
+
         edit_id = call_data_list[1]
-        print(type(edit_id))
+
         if edit_id == '1':
             my_orders = Order.objects.filter(user=user)
             my_order = OrderCredit.objects.filter(user=user)
@@ -1604,24 +1741,28 @@ def customer_edit(call):
                 text = "<b>📦 Maxsulotlar:</b>\n"
                 a = 1
                 summa = 0
-                for order in my_orders:
+                for order in my_orders.order_by('status'):
                     text += template.ORDER_TEXT['uz'].format(
                         a=a,
                         title=order.products,
                         count=order.count,
                         price=int(order.all_price / order.count),
-                        all_price=order.all_price
+                        all_price=order.all_price,
+                        status=order.status,
+                        currency=order.currency
+
                     )
                     summa += order.all_price
-                    a += 1
-                
-                for order in my_orders:
+                    a += 1    
+                for order in my_order.order_by('status'):
                     text += template.ORDER_TEXT['uz'].format(
                         a=a,
                         title=order.products,
                         count=order.count,
                         price=int(order.all_price / order.count),
-                        all_price=order.all_price
+                        all_price=order.all_price,
+                        status=order.status,
+                        currency=order.currency
                     )
                     a += 1
                     summa += order.all_price
@@ -1651,4 +1792,5 @@ def customer_edit(call):
 
 
 if __name__ == "__main__":
-    bot.polling()
+    # bot.polling()
+    bot.infinity_polling()

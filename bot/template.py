@@ -53,25 +53,26 @@ BACK = {
 PRODUCT_INFO = {
     "uz": """
 <code>* * * * * * *</code>
-    <b>📝 Nomi:</b><a href="https://telegra.ph/{path}"> <i>{title}</i></a>
-    <b>🧮 Miqdori: <i>{count} ta</i></b>
+<b>📝 Nomi:</b><a href="https://telegra.ph/{path}"> <i>{title}</i></a>
+<b>🧮 Miqdori: <i>{count} ta</i></b>
 <code>* * * * * * *</code>
 
-<b>Bo`lib to`lash narxi:</b>
-<i>Tarif:</i> {protsent} oy
-<i>Birinchi to`lov:</i> {one_pay} so`m
-<i>Umumiy:</i> {all_price}
+<b>👉 Bo`lib to`lash narxi:</b>
+<i>📆 Tarif:</i> {protsent} oy
+<i>💳 Birinchi to`lov:</i> {one_pay} {price_choice}
+<i>💰 Umumiy:</i> {all_price} {price_choice}
 
     """,
     "ru": """
 <code>* * * * * * *</code>
-    <b> 📝 Имя:</b> <a href="https://telegra.ph/{path}"><i>{title}</i>
-    <b>🧮 Количество: <i>{count} ta</i></b>
+<b> 📝 Имя:</b> <a href="https://telegra.ph/{path}"><i>{title}</i></a>
+<b>🧮 Количество: <i>{count} ta</i></b>
 <code>* * * * * * *</code>
 
-<b>Цена для рассрочки:</b>
-<i>Кредитный план::</i> {protsent} месяцев
-<i>Первоначальный взнос:</i> {one_pay} сум
+<b>👉 Цена для рассрочки:</b>
+<i>📆 Кредитный план::</i> {protsent} месяцев
+<i>💳 Первоначальный взнос:</i> {one_pay} {price_choice}
+<i>💰 Итого:</i> {all_price} {price_choice}
     """,
 }
 
@@ -91,10 +92,71 @@ ADDED_TO_SHOP_CARD = {
 }
 
 ADDED_TO_SHOP_CARDS = {
-    'uz': "<b>Sotib olish uchun yuborildi ✅</b>",
-    'ru': "<b>Отправлено на покупку ✅</b>"
+    'uz': "<b>Sizning №{id} raqamli buyurtmangiz qabul qilindi. Tasdiqlashlarini kuting ✅</b>",
+    'ru': "<b>Ваш заказ №{id} принят. Ждите подтверждения ✅</b>"
 }
 
+NEW_ORDER = {
+    'uz': """
+<b>🎊 Yangi №{id} raqamli buyurtma</b>
+👤 User: <a href="tg://user?id={chat_id}">{name}</a>
+📞 Telefon raqami: {phone}
+📍 Manzil: {adress}
+""",
+    'ru': """
+<b>🎊 Новый цифровой заказ № {id}</b>
+<b>👤 Пользователь:</b> <a href="tg://user?id={chat_id}">{name}</a>
+<b>📞 Номер телефона:</b> {phone}
+<b>📍 Адрес:</b> {adress}
+"""
+}
+
+NEW_ORDER_SEND_GROUPS = {
+    'uz': """
+<b>To`lov turi Tezkor xarid 💳</b>
+♻️Status: <code>{status}</code>
+<i>🔖 Nomi:</i> {title}
+<i>🔢 Soni:</i> {count}
+<i>💰 Puli:</i> {payments} {currency}  
+    
+    """,
+    'ru': """
+<b> Тип оплаты Быстрая покупка 💳 </b>
+♻️Status: <code>{status}</code>
+<i> 🔖 Имя: </i> {title}
+<i> 🔢 Сони: </i> {count}
+<i> 💰 Деньги: </i> {payments} {currency}
+
+    """
+
+}
+
+NEW_ORDER_SEND_GROUP = {
+    'uz':"""
+
+<b>To`lov turi Bo`lib to`lash 💳</b>
+♻️Status: <code>{status}</code>
+<i>🔖 Nomi:</i> {title}
+<i>🔢 Soni:</i> {count}
+<i>🧮 Foizi:</i> {percent}
+<i>📆 Oy:</i> {month}
+<i>💰 Puli:</i> {payments} {currency}
+<i>💸 Oyiga tolov:</i> {one_month} {currency}
+
+    """,
+    'ru': """
+    
+<b> Тип платежа Рассрочка 💳 </b>
+♻️Status: <code>{status}</code>
+<i> 🔖 Имя: </i> {title}
+<i> 🔢 Сони: </i> {count}
+<i> 🧮 Процент: </i> {percent}
+<i> 📆 Месяцев: </i> {month}
+<i> 💰 Деньги: </i> {payments} {currency}
+<i> 💸 Оплата в месяц: </i> {one_month} {currency}
+
+    """
+}
 EMPTY_SHOP_CARD = {
     'uz': "<b>Savatcha bo'sh 🗑</b>",
     'ru': "<b>Корзина пуста 🗑</b>"
@@ -148,32 +210,85 @@ PRODUCT_INFO_TEXT = {
     'uz': """
 <b>Xarid:</b> <code>{status}</code>
 <b>Nomi:</b> <i>{title}</i>
-<b>Narxi</b>: <i>{count} x {price} = {all_price}</i>
+<b>Narxi</b>: <i>{count} x {price} = {all_price} {price_choice}</i>
 <code>* * * * *</code>
         """,
     'ru': """
+<b>Покупка:</b> <code>{status}</code>
 <b>Имени:</b> <i>{title}</i>
-<b>Цена:</b> <i>{count} x {price} = {all_price}</i>
+<b>Цена:</b> <i>{count} x {price} = {all_price} {price_choice}</i>
 <code>* * * * *</code>"""
 }
+
 ORDER_TEXT = {
     'uz': """<b>{a}.</b> <i>{title}
-        <code>{count}x{price}={all_price}</code></i>\n""",
+        <code>{count}x{price}={all_price} {currency} </code> {status}</i>\n""",
 }
 
 PRODUCT_INFO_ONE = {
     'uz': """
 <b>Nomi:</b><a href="http://telegra.ph/{path}"> {title}</a>
-<b>Narxi</b>: <i>{count} x {price} = {all_price}</i>
+<b>Narxi</b>: <i>{count} x {price} = {all_price} {price_choice}</i>
 
         """,
     'ru': """
 <b>Имени:</b><a href="http://telegra.ph/{path}"> {title}</a>
-<b>Цена:</b> <i>{count} x {price} = {all_price}</i>
+<b>Цена:</b> <i>{count} x {price} = {all_price} {price_choice}</i>
 """
 }
 
 CLOSE = {
     'uz':"❌ Bekor qilish",
     'ru':"❌ Отменить действие"
+}
+
+KUPIT_SRAZU = {
+    'uz': '✅ Tezkor Xarid',
+    'ru': '✅ Купить сразу'
+}
+
+KUPIT_SRAZUS = {
+    'uz': "Tezkor Xarid",
+    'ru': "Купить сразу"
+}
+
+
+KUPIT_V_RASSROCHKU = {
+    'uz': "✅ Bo`lib to`lash",
+    'ru': "✅ Купить в рассрочку"
+}
+
+KUPIT_V_RASSROCHKUS = {
+    'uz': "Bo`lib to`lash",
+    'ru': "Купить в рассрочку"
+}
+
+KUPIT = {
+    'uz': "Bo'lib to'lash turini tanlang",
+    'ru': 'Выберите условия Рассрочки'
+}
+
+OTKAZAT =  {
+    'uz': 'Rad qilish ❌',
+    'ru': 'Отказать ❌'
+}
+ACCEPT ={
+    'uz': 'Tasdiqlash ✅',
+    'ru': 'Принятие ✅'
+}
+
+CANCELLED_ORDER = {
+    'uz': """
+<i>{title}
+        <code>{count}x{price}={all_price} {currency} </code> {status}</i>\n""",
+}
+
+SEND_USER_CANCELLED_ORDER = {
+    'uz': "Sizning №{id} raqamli buyurtmangiz qabul qilinmadi.",
+    'ru': "Ваш заказ №{id} не принят."
+}
+
+ADMIN_CANCELLED_ORDER = {
+    'uz': "<b>№{id} raqamli buyurtma Bekor qilindi</b>",
+    'ru': "<b>№{id} цифровой заказ Отменен</b>"
 }
